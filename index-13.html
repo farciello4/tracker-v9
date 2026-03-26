@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Certificate Barrier Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap');
+:root{--bg:#07090f;--c1:#0e1118;--c2:#131720;--c3:#181e2b;--b1:#1c2235;--b2:#28304a;--t:#dde3f0;--m:#5a6480;--m2:#3a4060;--g:#0ddd88;--gd:rgba(13,221,136,.1);--y:#f5c842;--yd:rgba(245,200,66,.1);--o:#ff7c38;--od:rgba(255,124,56,.1);--r:#ff3d5a;--rd:rgba(255,61,90,.1);--a:#4f7cff;--ad:rgba(79,124,255,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t);font-family:'DM Sans',sans-serif;font-size:14px;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 40% at 50% -5%,rgba(79,124,255,.05),transparent)}
+.wrap{position:relative;z-index:1;max-width:1500px;margin:0 auto;padding:24px 20px}
+.hdr{display:flex;align-items:center;gap:16px;padding-bottom:20px;margin-bottom:24px;border-bottom:1px solid var(--b1)}
+.logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#4f7cff,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;box-shadow:0 0 24px rgba(79,124,255,.3)}
+.ht h1{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-.3px}
+.ht p{font-size:11px;color:var(--m);margin-top:2px}
+.clk{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--m);background:var(--c2);border:1px solid var(--b1);border-radius:6px;padding:5px 10px}
+.drop{border:2px dashed var(--b2);border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;transition:.2s;background:var(--c1);margin-bottom:16px;position:relative}
+.drop:hover,.drop.over{border-color:var(--a);background:var(--ad)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.di{font-size:36px;margin-bottom:10px}.dt{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px}.ds{font-size:11px;color:var(--m);line-height:1.9}
+.fbadge{display:inline-flex;align-items:center;gap:5px;margin-top:10px;background:var(--gd);color:var(--g);border:1px solid rgba(13,221,136,.2);border-radius:20px;padding:3px 12px;font-size:11px;font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.stat{background:var(--c2);border:1px solid var(--b1);border-radius:10px;padding:12px 16px}
+.sl{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--m);margin-bottom:5px}
+.sn{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:600}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:7px;font:500 13px 'DM Sans',sans-serif;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
+.bp{background:var(--a);color:#fff}.bp:hover{background:#6b91ff}
+.bs{background:var(--c2);color:var(--m);border:1px solid var(--b1)}.bs:hover{color:var(--t);border-color:var(--b2)}
+.bg{background:var(--gd);color:var(--g);border:1px solid rgba(13,221,136,.2)}.bg:hover{background:rgba(13,221,136,.18)}
+.bo{background:var(--od);color:var(--o);border:1px solid rgba(255,124,56,.2)}
+.upd{margin-left:auto;font-size:11px;color:var(--m)}
+.pbox{background:var(--c2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.phdr{display:flex;justify-content:space-between;font-size:11px;color:var(--m);margin-bottom:7px}
+.ptrack{background:var(--b1);border-radius:3px;height:4px;overflow:hidden}
+.pfill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--a),var(--g));transition:width .4s;width:0}
+.log{margin-top:10px;max-height:120px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--m);line-height:1.6}
+.lok{color:var(--g)}.lerr{color:var(--r)}.linf{color:var(--a)}.lwrn{color:var(--y)}
+.tbox{overflow-x:auto;border-radius:10px;border:1px solid var(--b1)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--c3);padding:9px 13px;text-align:left;font-size:9px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--b1);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--b1);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--c2)}
+td{padding:9px 13px;vertical-align:middle}
+.r{text-align:right}
+.isin-t{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--a)}
+.ced-a{display:inline-block;font-size:9px;color:rgba(245,200,66,.85);background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.15);border-radius:3px;padding:1px 5px;text-decoration:none;margin-top:3px;font-family:'JetBrains Mono',monospace}
+.ced-a:hover{background:rgba(245,200,66,.15)}
+.chips{display:flex;flex-wrap:wrap;gap:3px}
+.chip{border-radius:3px;padding:2px 6px;font-size:10px;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.cg{background:var(--gd);color:var(--g);border:1px solid rgba(13,221,136,.15)}
+.cy{background:var(--yd);color:var(--y);border:1px solid rgba(245,200,66,.15)}
+.co{background:var(--od);color:var(--o);border:1px solid rgba(255,124,56,.15)}
+.cr{background:var(--rd);color:var(--r);border:1px solid rgba(255,61,90,.15)}
+.cn{background:var(--ad);color:var(--a);border:1px solid rgba(79,124,255,.15)}
+.brow{display:flex;align-items:center;gap:8px}
+.btrack{flex:1;height:4px;background:var(--b1);border-radius:2px;overflow:hidden;min-width:80px}
+.bfill{height:100%;border-radius:2px;transition:width .6s}
+.bval{font-family:'JetBrains Mono',monospace;font-size:12px;min-width:44px;text-align:right;font-weight:600}
+.sem{display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap;min-width:118px;justify-content:center}
+.sg{background:var(--gd);color:var(--g);border:1px solid rgba(13,221,136,.2)}
+.sy{background:var(--yd);color:var(--y);border:1px solid rgba(245,200,66,.2)}
+.so{background:var(--od);color:var(--o);border:1px solid rgba(255,124,56,.2)}
+.sr{background:var(--rd);color:var(--r);border:1px solid rgba(255,61,90,.2)}
+.snd{background:transparent;color:var(--m);border:1px solid var(--b1)}
+.src{font-size:9px;padding:1px 5px;border-radius:3px;border:1px solid var(--b1);color:var(--m);font-family:'JetBrains Mono',monospace}
+.src-bnp{border-color:rgba(79,124,255,.3);color:var(--a);background:var(--ad)}
+.src-ced{border-color:rgba(13,221,136,.2);color:var(--g);background:var(--gd)}
+.src-man{border-color:rgba(245,200,66,.2);color:var(--y);background:var(--yd)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--c2);border:1px solid var(--b2);border-radius:14px;padding:26px;width:580px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 30px 80px rgba(0,0,0,.7)}
+.modal h3{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:14px}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fg .full{grid-column:1/-1}
+label{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--m);margin-bottom:3px}
+input,textarea{width:100%;background:var(--bg);border:1px solid var(--b2);border-radius:6px;color:var(--t);padding:8px 11px;font-family:'JetBrains Mono',monospace;font-size:12px;transition:.15s}
+input:focus,textarea:focus{outline:none;border-color:var(--a)}
+textarea{resize:vertical;min-height:90px}
+.mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--b1)}
+#toast{position:fixed;bottom:22px;right:22px;z-index:999;background:var(--c3);border:1px solid var(--b2);border-radius:8px;padding:11px 16px;font-size:12px;max-width:320px;transform:translateY(12px);opacity:0;transition:.25s;pointer-events:none}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{border-color:rgba(13,221,136,.3);color:var(--g)}
+#toast.err{border-color:rgba(255,61,90,.3);color:var(--r)}
+#toast.inf{border-color:rgba(79,124,255,.3);color:var(--a)}
+@media(max-width:800px){.stats{grid-template-columns:repeat(3,1fr)}.fg{grid-template-columns:1fr}}
+.pcard{background:var(--c2);border:1px solid var(--b2);border-radius:10px;padding:12px 14px}
+.pcard-name{font-size:11px;color:var(--m);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard-price{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;margin-bottom:6px}
+.pcard-meta{font-size:10px;color:var(--m);margin-bottom:8px}
+.pcard-bar{height:4px;background:var(--b1);border-radius:2px;overflow:hidden;margin-bottom:4px}
+.pcard-fill{height:100%;border-radius:2px;transition:width .6s}
+.pcard-dist{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600}
+.pcard input{margin-top:6px;width:100%;background:var(--bg);border:1px solid var(--b2);border-radius:5px;color:var(--t);padding:5px 8px;font-family:'JetBrains Mono',monospace;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="hdr">
+  <div class="logo">📊</div>
+  <div class="ht">
+    <h1>Certificate Barrier Tracker</h1>
+    <p>Carica l'Excel della banca → CedLab + BNP Paribas + Borsa Italiana → semaforo distanza barriera</p>
+  </div>
+  <div class="clk" id="clock">--:--:--</div>
+</div>
+<div class="drop" id="drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="onDrop(event)">
+  <input type="file" accept=".xlsx,.xls,.csv" onchange="onFile(this.files[0])">
+  <div class="di">📂</div>
+  <div class="dt">Trascina qui l'Excel esportato dalla banca</div>
+  <div class="ds">oppure clicca per selezionare &nbsp;·&nbsp; <strong>.xlsx &nbsp;.xls &nbsp;.csv</strong></div>
+  <div id="fb" style="display:none" class="fbadge">✓ <span id="fn"></span></div>
+</div>
+<div class="pbox" id="pbox" style="display:none">
+  <div class="phdr"><span id="plabel">Elaborazione...</span><span id="ppct">0%</span></div>
+  <div class="ptrack"><div class="pfill" id="pfill"></div></div>
+  <div class="log" id="logEl"></div>
+</div>
+<div class="stats" id="statsEl" style="display:none">
+  <div class="stat"><div class="sl">Totale</div><div class="sn" id="sT">0</div></div>
+  <div class="stat"><div class="sl" style="color:var(--g)">🟢 Sicuri</div><div class="sn" style="color:var(--g)" id="sG">0</div></div>
+  <div class="stat"><div class="sl" style="color:var(--y)">🟡 Monitorare</div><div class="sn" style="color:var(--y)" id="sY">0</div></div>
+  <div class="stat"><div class="sl" style="color:var(--o)">🟠 Attenzione</div><div class="sn" style="color:var(--o)" id="sO">0</div></div>
+  <div class="stat"><div class="sl" style="color:var(--r)">🔴 Critici</div><div class="sn" style="color:var(--r)" id="sR">0</div></div>
+</div>
+<div class="toolbar" id="toolbarEl" style="display:none">
+  <button class="btn bg" onclick="refreshAll()">🔄 Aggiorna prezzi</button>
+  <button class="btn bs" onclick="openAdd()">＋ Aggiungi</button>
+  <button class="btn bs" onclick="openPrezzi()">📊 Prezzi sottostanti</button>
+  <button class="btn bs" onclick="exportCSV()">⬇ CSV</button>
+  <button class="btn bo" onclick="azzeraAll()">🗑 Azzera tutto</button>
+  <span class="upd" id="updEl">—</span>
+</div>
+<div class="tbox" id="tableEl" style="display:none">
+  <table>
+    <thead><tr><th>ISIN</th><th>Prodotto</th><th>Sottostanti</th><th class="r">Strike</th><th class="r">Prezzo</th><th class="r">Barriera €</th><th>Distanza</th><th>Semaforo</th><th>Fonte</th><th></th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+</div>
+<div class="overlay" id="ov" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+  <h3 id="mTitle">Certificate</h3>
+  <div class="fg">
+    <div class="full"><label>ISIN *</label><input id="mISIN" placeholder="es: XS3063310356"></div>
+    <div class="full"><label>Nome prodotto</label><input id="mNome"></div>
+    <div><label>Emittente</label><input id="mEmit"></div>
+    <div><label>Barriera %</label><input id="mBarr" type="number" step="0.1" placeholder="es: 30"></div>
+    <div><label>Scadenza</label><input id="mScad" placeholder="es: 24/10/2028"></div>
+    <div></div>
+    <div class="full">
+      <label>Sottostanti — una riga: NOME ; ISIN ; STRIKE</label>
+      <textarea id="mSotto" placeholder="Intesa Sanpaolo ; IT0000072618 ; 5.348&#10;UniCredit ; IT0005239360 ; 61.59&#10;Commerzbank ; DE000CBK1001 ; 29.66"></textarea>
+    </div>
+  </div>
+  <div class="mfoot">
+    <button class="btn bs" onclick="closeModal()">Annulla</button>
+    <button class="btn bo" id="mDel" style="display:none" onclick="deleteCert()">🗑 Elimina</button>
+    <button class="btn bp" onclick="saveModal()">💾 Salva</button>
+  </div>
+</div>
+</div>
+<!-- MODAL PREZZI SOTTOSTANTI -->
+<div class="overlay" id="ovPrezzi" onclick="if(event.target===this)closePrezzi()">
+<div class="modal" style="width:700px;max-width:100%">
+  <h3>📊 Prezzi sottostanti</h3>
+  <input id="prezziSearch" type="text" placeholder="🔍 Cerca sottostante..." oninput="filtraPrezzi(this.value)" style="width:100%;margin-bottom:14px;background:var(--bg);border:1px solid var(--b2);border-radius:7px;color:var(--t);padding:9px 12px;font-family:'DM Sans',sans-serif;font-size:13px">
+  <div id="prezziGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px"></div>
+  <div class="mfoot">
+    <button class="btn bs" onclick="closePrezzi()">Chiudi</button>
+  </div>
+</div>
+</div>
+<div id="toast"></div>
+<script>
+const NAME2ISIN={'unicredit':'IT0005239360','intesa sanpaolo':'IT0000072618','intesa':'IT0000072618','banco bpm':'IT0005218380','banca mps':'IT0005508921','monte dei paschi':'IT0005508921','mps':'IT0005508921','generali':'IT0000062072','assicurazioni generali':'IT0000062072','enel':'IT0003128367','eni':'IT0003132476','leonardo':'IT0003856405','ferrari':'NL0011585146','stellantis':'NL00150001Q9','bper':'IT0000066123','bper banca':'IT0000066123','mediobanca':'IT0000062957','a2a':'IT0004197049','commerzbank':'DE000CBK1001','deutsche bank':'DE0005140008','siemens energy':'DE000ENER6Y0','allianz':'DE0008404005','societe generale':'FR0000130809','société générale':'FR0000130809','axa':'FR0000120628','kering':'FR0000121485','bbva':'ES0113211835','banco bilbao':'ES0113211835','repsol':'ES0173516115','stmicroelectronics':'NL0000009538','stm':'NL0000009538','aegon':'NL0000687663','barclays':'GB0031348658','british petroleum':'GB0007980591','bp':'GB0007980591','prudential':'GB0007099541','chevron':'US1667641005','nvidia':'US67066G1040','tesla':'US88160R1014','meta':'US30303M1027','nikkei 225':'JP9010C00002','nikkei':'JP9010C00002','s&p 500':'US78378X1072','s&p500':'US78378X1072','nasdaq 100':'US6311011026','nasdaq':'US6311011026','euro stoxx 50':'EU0009658145','eurostoxx 50':'EU0009658145','euro stoxx banks':'EU0009658426','eurostoxx banks':'EU0009658426','ftse mib':'IT0003465736','ftsemib':'IT0003465736'};
+function nameToISIN(n){const k=n.toLowerCase().trim();if(NAME2ISIN[k])return NAME2ISIN[k];for(const[key,val]of Object.entries(NAME2ISIN))if(k.includes(key)||key.includes(k))return val;return null;}
+const ISIN2LABEL={'IT0005239360':'UCG','IT0000072618':'ISP','DE000CBK1001':'CBK','ES0113211835':'BBVA','IT0005218380':'BancoBPM','IT0005508921':'MPS','IT0000062072':'G','IT0003128367':'ENEL','IT0003132476':'ENI','IT0003856405':'LDO','DE000ENER6Y0':'SiemensE','NL0011585146':'RACE','NL00150001Q9':'STLAM','IT0000066123':'BPER','DE0005140008':'DBK','FR0000130809':'SocGen','NL0000009538':'STM','FR0000121485':'KER','NL0000687663':'AGN','DE0008404005':'ALV','FR0000120628':'AXA','ES0173516115':'REP','GB0031348658':'BARC','GB0007980591':'BP','US1667641005':'CVX','GB0007099541':'PRU','JP9010C00002':'NKY','US78378X1072':'SP500','US6311011026':'NDX','EU0009658145':'SX5E','EU0009658426':'EXBanks','IT0003465736':'FTSEMIB','US67066G1040':'NVDA','US88160R1014':'TSLA','US30303M1027':'META','IT0000062957':'MB','IT0004197049':'A2A','FR0000131104':'BNP'};
+function biUrl(isin){if(!isin)return null;if(isin.startsWith('IT'))return`https://www.borsaitaliana.it/borsa/azioni/scheda/${isin}-MTAA.html?lang=it`;return`https://www.borsaitaliana.it/borsa/azioni/global-equity-market/scheda/${isin}-BGEM.html?lang=it`;}
+
+const CACHE_KEY='cert_v9';
+let S={isins:[],certs:{},prices:{}};
+let editISIN=null;
+const lc=()=>{try{return JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')}catch{return{}}};
+const sc=d=>{try{localStorage.setItem(CACHE_KEY,JSON.stringify(d))}catch{}};
+
+const WORKER='https://divine-term-f021.f-arciello.workers.dev';
+
+async function fetchProxy(url){
+  try{
+    const r=await fetch(`${WORKER}?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(15000)});
+    if(!r.ok) return null;
+    const t=await r.text();
+    return t.length>200?t:null;
+  }catch(e){
+    // Fallback ai proxy pubblici se il Worker non risponde
+    const proxies=[
+      async()=>{const r=await fetch(`https://corsproxy.io/?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(12000)});if(!r.ok)return null;const t=await r.text();return t.length>500?t:null;},
+      async()=>{const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,{signal:AbortSignal.timeout(12000)});if(!r.ok)return null;const t=await r.text();return t.length>500?t:null;},
+    ];
+    for(const p of proxies){try{const res=await p();if(res)return res;}catch{}}
+    return null;
+  }
+}
+function pn(s){if(!s)return 0;return parseFloat(String(s).replace(/[^\d.,]/g,'').replace(',','.'))||0;}
+
+function onDrop(e){e.preventDefault();document.getElementById('drop').classList.remove('over');if(e.dataTransfer.files[0])onFile(e.dataTransfer.files[0]);}
+function onFile(file){
+  if(!file)return;
+  document.getElementById('fn').textContent=file.name;
+  document.getElementById('fb').style.display='inline-flex';
+  const reader=new FileReader();
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'){reader.onload=e=>parseCSV(e.target.result);reader.readAsText(file,'utf-8');}
+  else{reader.onload=e=>parseXLSX(e.target.result);reader.readAsArrayBuffer(file);}
+}
+function parseCSV(text){
+  const sep=text.split(';').length>text.split(',').length?';':',';
+  const lines=text.trim().split('\n').filter(l=>l.trim());
+  const hdrs=lines[0].split(sep).map(h=>h.trim().replace(/^"|"$/g,''));
+  const rows=lines.slice(1).map(l=>{const v=l.split(sep).map(c=>c.trim().replace(/^"|"$/g,''));const o={};hdrs.forEach((h,i)=>o[h]=v[i]||'');return o;});
+  extractISINs(hdrs,rows);
+}
+function parseXLSX(buf){
+  const wb=XLSX.read(buf,{type:'arraybuffer'});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+  if(!rows.length){toast('File vuoto','err');return;}
+  extractISINs(Object.keys(rows[0]),rows);
+}
+function extractISINs(hdrs,rows){
+  const isinKey=hdrs.find(h=>/isin/i.test(h));
+  const isins=new Set();
+  const add=v=>{const s=String(v||'').trim().toUpperCase();if(/^[A-Z]{2}[A-Z0-9]{10}$/.test(s))isins.add(s);};
+  if(isinKey)rows.forEach(r=>add(r[isinKey]));
+  else rows.forEach(r=>Object.values(r).forEach(add));
+  if(!isins.size){toast('Nessun ISIN trovato','err');return;}
+  S.isins=[...isins];
+  toast(`✓ ${S.isins.length} ISIN trovati`,'ok');
+  runPipeline();
+}
+
+async function runPipeline(){
+  showProg(true);
+  const cache=lc();
+  log(`🔍 ${S.isins.length} certificates...`,'linf');
+  let done=0;
+  for(const isin of S.isins){
+    setProg(Math.round(done/S.isins.length*50),`Dati: ${isin}`);
+    if(cache[isin]?.sottostanti?.length){S.certs[isin]=cache[isin];log(`  📦 ${isin} — cache`,'lok');}
+    else{S.certs[isin]=await fetchCertData(isin);cache[isin]=S.certs[isin];sc(cache);}
+    done++;await sleep(250);
+  }
+  const bnp=S.isins.filter(i=>i.startsWith('NLBNPIT'));
+  let bi=0;
+  for(const isin of bnp){setProg(50+Math.round(bi/Math.max(bnp.length,1)*25),`Prezzi BNP: ${isin}`);await fetchBNPLive(isin,cache);bi++;await sleep(300);}
+  const needed=new Set();
+  for(const c of Object.values(S.certs))for(const s of(c.sottostanti||[]))if(s.isin_s&&!s.prezzo_live)needed.add(s.isin_s);
+  let pi=0;
+  for(const isinS of needed){
+    setProg(75+Math.round(pi/Math.max(needed.size,1)*23),`Prezzo: ${ISIN2LABEL[isinS]||isinS.slice(0,8)}`);
+    if(!S.prices[isinS]){const p=await fetchBIPrice(isinS);if(p){S.prices[isinS]=p;log(`  ✓ ${ISIN2LABEL[isinS]||isinS}: ${p.toFixed(3)}`,'lok');}else log(`  ✗ ${ISIN2LABEL[isinS]||isinS}: n/d`,'lwrn');}
+    pi++;await sleep(300);
+  }
+  setProg(100,'✓ Completato');render();showProg(false);
+  show('statsEl');show('toolbarEl');show('tableEl');
+  document.getElementById('updEl').textContent='Aggiornato: '+new Date().toLocaleTimeString('it-IT');
+}
+
+async function fetchCertData(isin){
+  const base={isin,nome:isin,emittente:null,barrieraPct:null,scadenza:null,sottostanti:[],fonte:'manuale'};
+  log(`  → CedLab: ${isin}`);
+  const html=await fetchProxy(`https://www.certificatiederivati.it/db_bs_scheda_certificato.asp?isin=${isin}`);
+  if(!html){log(`  ✗ ${isin} — proxy n/d, usa ✏️`,'lerr');return base;}
+  if(!html.includes('STRIKE')&&!html.includes('Scheda Sottostante')){log(`  ⚠ ${isin} — non su CedLab`,'lwrn');return base;}
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  let nome=isin;
+  doc.querySelectorAll('h3').forEach(h=>{const t=h.textContent.trim();if(t.length>5&&t===t.toUpperCase()&&!/CEDLAB|CAPITAL|JOURNAL|PORTAFOGLI|TELEGRAM/i.test(t))nome=t.charAt(0)+t.slice(1).toLowerCase();});
+  let scadenza=null;
+  doc.querySelectorAll('tr').forEach(tr=>{const cells=[...tr.querySelectorAll('td')].map(c=>c.textContent.trim());if(cells.length>=2&&/data scadenza/i.test(cells[0]))scadenza=cells[1];});
+  let emittente=null;
+  doc.querySelectorAll('table').forEach(tbl=>{if(!tbl.textContent.includes('Rating'))return;for(const td of tbl.querySelectorAll('td')){const v=td.textContent.trim();if(v.length>2&&!v.startsWith('Rating')&&!v.includes('@')&&!v.includes('http')&&!v.includes('800')&&!/^\d/.test(v)){emittente=v;break;}}});
+  let sottostanti=[];
+  doc.querySelectorAll('table').forEach(tbl=>{
+    const rows=[...tbl.querySelectorAll('tr')];
+    const hi=rows.findIndex(r=>/STRIKE/i.test(r.textContent)&&/DESCRIZIONE/i.test(r.textContent));
+    if(hi<0)return;
+    rows.slice(hi+1).forEach(tr=>{
+      const cells=[...tr.querySelectorAll('td,th')].map(c=>c.textContent.trim());
+      if(cells.length<2)return;
+      const nomeS=cells[0];const strike=pn(cells[1]);
+      if(!nomeS||nomeS.length<2||!strike)return;
+      sottostanti.push({nome:nomeS,isin_s:nameToISIN(nomeS),strike,prezzo_live:null,barriera_live:null});
+    });
+  });
+  // Barriera: leggila dallo script inline che CedLab usa per la chiamata AJAX
+  // es: barriera: "30&nbsp;%", livello: "8,898"
+  let barrieraPct=null;
+  doc.querySelectorAll('script').forEach(sc=>{
+    if(barrieraPct) return;
+    const t=sc.textContent||'';
+    // cerca: barriera: "30&nbsp;%"  oppure barriera: "30 %"
+    const m=t.match(/barriera\s*:\s*["'](\d+(?:[.,]\d+)?)\s*(?:&nbsp;)?\s*%["']/i);
+    if(m){const v=parseFloat(m[1].replace(',','.'));if(v>=10&&v<=90)barrieraPct=v;}
+  });
+  // fallback: cerca nella tabella statica (per chi ha già l'HTML renderizzato)
+  if(!barrieraPct){
+    doc.querySelectorAll('table').forEach(tbl=>{
+      if(barrieraPct||!/Barriera Down/i.test(tbl.textContent))return;
+      tbl.querySelectorAll('tr').forEach(tr=>{
+        if(barrieraPct)return;
+        const cells=[...tr.querySelectorAll('td,th')].map(c=>c.textContent.trim());
+        const m=cells[0]?.match(/^(\d+(?:[.,]\d+)?)\s*%/);
+        if(m){const v=parseFloat(m[1].replace(',','.'));if(v>=10&&v<=90)barrieraPct=v;}
+      });
+    });
+  }
+  if(sottostanti.length){log(`  ✓ ${isin} — ${sottostanti.length} sott.${barrieraPct?' | barriera '+barrieraPct+'%':' | ⚠ barriera mancante'}`,'lok');return{isin,nome,emittente,barrieraPct,scadenza,sottostanti,fonte:'cedlab'};}
+  log(`  ⚠ ${isin} — dati non estratti, usa ✏️`,'lwrn');
+  return{...base,nome,emittente,scadenza};
+}
+
+async function fetchBNPLive(isin,cache){
+  const html=await fetchProxy(`https://investimenti.bnpparibas.it/product-details/${isin}/`);
+  if(!html)return;
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const cert=S.certs[isin]||{};
+  let nomi=[],isins=[],strikes=[],prezzi=[],barriere=[];
+  doc.querySelectorAll('table').forEach(tbl=>{tbl.querySelectorAll('tr').forEach(tr=>{const cells=[...tr.querySelectorAll('td,th')].map(c=>c.textContent.trim());if(!cells.length)return;const lbl=cells[0].toLowerCase();const vals=cells.slice(1).filter(v=>v);if(/sottostante/i.test(lbl)&&vals.length)nomi=vals;else if(/^isin$/.test(lbl)&&vals.length)isins=vals;else if(/livello strike/i.test(lbl)&&vals.length)strikes=vals;else if(/ultimo prezzo/i.test(lbl)&&vals.length)prezzi=vals;else if(/barriera a scadenza/i.test(lbl)&&vals.length)barriere=vals;});});
+  if(strikes.length&&barriere.length){const s0=pn(strikes[0]),b0=pn(barriere[0]);if(s0>0&&b0>0)cert.barrieraPct=Math.round(b0/s0*100);}
+  if(nomi.length){const ns=[];for(let i=0;i<nomi.length;i++){const nome=nomi[i].split('\n')[0].trim();if(!nome||nome==='Worst')continue;const isinS=isins[i]||nameToISIN(nome)||null;const strike=pn(strikes[i])||0;const prezzo=pn(prezzi[i]);const barriera=pn(barriere[i]);ns.push({nome,isin_s:isinS,strike,prezzo_live:prezzo>0?prezzo:null,barriera_live:barriera>0?barriera:null});}if(ns.length){cert.sottostanti=ns;cert.fonte='bnp';log(`  ✓ ${isin} — BNP live`,'lok');}}
+  S.certs[isin]=cert;cache[isin]=cert;sc(cache);
+}
+
+async function fetchGooglePrice(isinS, lbl){
+  // Google Finance con ISIN mostra lista suggerimenti con prezzi
+  const html=await fetchProxy(`https://www.google.com/finance/quote/${isinS}?hl=it`);
+  if(!html) return null;
+  // Estrae il primo prezzo in formato italiano (es: "31,61 €" o "31,61 EUR")
+  const patterns=[
+    // Formato italiano con virgola decimale + euro
+    /(\d{1,3}(?:\.\d{3})*,\d{2})\s*(?:€|EUR)/,
+    // Solo numero con virgola decimale vicino a euro nell'HTML
+    />([\d]{1,6},[\d]{2})<[^<]*(?:€|EUR)/,
+    // Formato con punto decimale
+    /(\d{1,6}\.\d{2})\s*(?:€|EUR)/,
+  ];
+  for(const pat of patterns){
+    const m=html.match(pat);
+    if(m){
+      let raw=m[1];
+      if(raw.includes(',')&&raw.includes('.')) raw=raw.replace(/\./g,'').replace(',','.');
+      else if(raw.includes(',')) raw=raw.replace(',','.');
+      const n=parseFloat(raw);
+      if(n>0&&n<10000000){
+        log(`  ✓ ${lbl}: ${n.toFixed(3)} (Google Finance)`,'lok');
+        return n;
+      }
+    }
+  }
+  return null;
+}
+
+async function fetchBIPrice(isinS){
+  const lbl = ISIN2LABEL[isinS]||isinS.slice(0,8);
+
+  // 1. Borsa Italiana
+  const url = biUrl(isinS);
+  if(url){
+    log(`  → ${lbl}: Borsa Italiana (${isinS.startsWith('IT')?'MTAA':'BGEM'})`);
+    const html = await fetchProxy(url);
+    if(html){
+      const doc = new DOMParser().parseFromString(html,'text/html');
+      for(const s of doc.querySelectorAll('strong')){
+        const v = s.textContent.trim().replace(',','.');
+        const n = parseFloat(v);
+        if(n>0&&n<100000&&/^\d+[.,]\d+$/.test(s.textContent.trim())){
+          log(`  ✓ ${lbl}: ${n.toFixed(3)} (Borsa Italiana)`,'lok');
+          return n;
+        }
+      }
+    }
+    log(`  ✗ ${lbl}: BI n/d, provo Google`,'lwrn');
+  }
+
+  // 2. Fallback Google Finance — cerca per ISIN
+  const p = await fetchGooglePrice(isinS, lbl);
+  if(p) return p;
+
+  log(`  ✗ ${lbl}: prezzo non trovato`,'lwrn');
+  return null;
+}
+
+async function refreshAll(){
+  Object.values(S.certs).forEach(c=>(c.sottostanti||[]).forEach(s=>{s.prezzo_live=null;s.barriera_live=null;}));
+  S.prices={};showProg(true);log('🔄 Aggiornamento...','linf');
+  const cache=lc();
+  let i=0;const bnp=S.isins.filter(x=>x.startsWith('NLBNPIT'));
+  for(const isin of bnp){setProg(Math.round(i/Math.max(bnp.length,1)*50),`BNP: ${isin}`);await fetchBNPLive(isin,cache);i++;await sleep(300);}
+  const needed=new Set();
+  for(const c of Object.values(S.certs))for(const s of(c.sottostanti||[]))if(s.isin_s&&!s.prezzo_live)needed.add(s.isin_s);
+  let j=0;
+  for(const isinS of needed){setProg(50+Math.round(j/Math.max(needed.size,1)*48),`Prezzo: ${ISIN2LABEL[isinS]||isinS.slice(0,8)}`);const p=await fetchBIPrice(isinS);if(p){S.prices[isinS]=p;log(`  ✓ ${ISIN2LABEL[isinS]||isinS}: ${p.toFixed(3)}`,'lok');}j++;await sleep(300);}
+  setProg(100,'✓');render();showProg(false);
+  document.getElementById('updEl').textContent='Aggiornato: '+new Date().toLocaleTimeString('it-IT');
+  toast('Prezzi aggiornati ✓','ok');
+}
+
+function setManualPrice(certISIN, key, val){
+  const p=parseFloat(val);
+  if(!p||p<=0){toast('Prezzo non valido','err');return;}
+  const c=S.certs[certISIN];if(!c)return;
+  const s=c.sottostanti?.find(s=>s.isin_s===key||s.nome===key);
+  if(s){
+    s.prezzo_live=p;
+    s.manuale=true;
+    if(s.isin_s) S.prices[s.isin_s]=p;
+    const cache=lc();cache[certISIN]=c;sc(cache);
+    render();
+    toast(`✓ Prezzo manuale ${key.slice(0,8)}: ${p}`,'ok');
+  }
+}
+
+function render(){
+  let g=0,y=0,o=0,r=0;
+  document.getElementById('tbody').innerHTML=S.isins.map(isin=>{
+    const c=S.certs[isin]||{},sotto=c.sottostanti||[],barr=c.barrieraPct;
+    let wd=null,ws=null;
+    sotto.forEach(s=>{const p=s.prezzo_live??S.prices[s.isin_s];const bl=s.barriera_live??(s.strike&&barr?s.strike*(barr/100):null);if(!p||!bl)return;const d=(p-bl)/p;if(wd===null||d<wd){wd=d;ws={...s,p,bl};}});
+    let scls='snd',slbl='⚪ N/D';
+    if(wd!==null){if(wd<0){scls='sr';slbl='🔴 VIOLATA';r++;}else if(wd<.05){scls='sr';slbl='🔴 CRITICO';r++;}else if(wd<.15){scls='so';slbl='🟠 ATTENZIONE';o++;}else if(wd<.30){scls='sy';slbl='🟡 MONITORARE';y++;}else{scls='sg';slbl='🟢 SICURO';g++;}}
+    const bw=wd===null?0:Math.min(100,Math.max(0,wd*100));
+    const bc=wd===null?'var(--m2)':wd<.05?'var(--r)':wd<.15?'var(--o)':wd<.30?'var(--y)':'var(--g)';
+    const chips=sotto.map(s=>{
+      const p=s.prezzo_live??S.prices[s.isin_s];
+      const bl=s.barriera_live??(s.strike&&barr?s.strike*(barr/100):null);
+      const d=(p&&bl)?(p-bl)/p:null;
+      const cls=d===null?'cn':d<.05?'cr':d<.15?'co':d<.30?'cy':'cg';
+      const lbl=ISIN2LABEL[s.isin_s]||s.nome?.slice(0,8)||'?';
+      const tip=d!=null?`${s.nome}: P=${p?.toFixed(3)} | Barr=${bl?.toFixed(3)} | Dist=${(d*100).toFixed(1)}%`:s.nome;
+      if(!p){
+        // Nessun prezzo trovato — mostra campo input manuale
+        const key=s.isin_s||s.nome;
+        return`<span class="chip cn" title="Inserisci prezzo manuale per ${s.nome}">${lbl} <input type="number" step="0.001" placeholder="prezzo" style="width:58px;background:var(--bg);border:1px solid var(--a);border-radius:3px;color:var(--t);padding:1px 3px;font-size:9px;font-family:JetBrains Mono,monospace" onchange="setManualPrice('${isin}','${key}',this.value)" onclick="event.stopPropagation()"></span>`;
+      }
+      const mBadge=s.manuale?'<span style="font-size:8px;background:var(--o);color:#fff;border-radius:2px;padding:0 3px;margin-left:2px">M</span>':'';
+      return`<span class="chip ${cls}" title="${tip}">${lbl}${mBadge}</span>`;
+    }).join('')||`<span style="color:var(--o);font-size:11px">⚠ clicca ✏️</span>`;
+    const srcCls=c.fonte==='bnp'?'src-bnp':c.fonte==='cedlab'?'src-ced':'src-man';
+    const srcLabel=c.fonte==='bnp'?'BNP live':c.fonte==='cedlab'?'CedLab':'manuale';
+    return`<tr><td><div class="isin-t">${isin}</div><a class="ced-a" href="https://www.certificatiederivati.it/db_bs_scheda_certificato.asp?isin=${isin}" target="_blank">CedLab ↗</a></td><td style="max-width:200px"><div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${c.nome||''}">${c.nome||'—'}</div><div style="font-size:10px;color:var(--m);margin-top:1px">${c.emittente||''}${c.scadenza?' · sc. '+c.scadenza:''}</div>${!barr&&sotto.length?'<div style="font-size:10px;color:var(--y)">⚠ inserire barriera% ✏️</div>':''}</td><td><div class="chips">${chips}</div></td><td class="r" style="font-family:JetBrains Mono,monospace;font-size:11px">${ws&&ws.strike?fmt(ws.strike):'—'}</td><td class="r" style="font-family:JetBrains Mono,monospace;font-size:11px;color:${bc}">${ws?fmt(ws.p):'—'}</td><td class="r" style="font-family:JetBrains Mono,monospace;font-size:11px">${ws?fmt(ws.bl):'—'}</td><td><div class="brow"><div class="btrack"><div class="bfill" style="width:${bw}%;background:${bc}"></div></div><span class="bval" style="color:${bc}">${wd!==null?(wd*100).toFixed(1)+'%':'—'}</span></div></td><td><span class="sem ${scls}">${slbl}</span></td><td><span class="src ${srcCls}">${srcLabel}</span></td><td><button class="btn bs" style="padding:3px 8px;font-size:11px" onclick="openEdit('${isin}')">✏️</button></td></tr>`;
+  }).join('');
+  document.getElementById('sT').textContent=S.isins.length;
+  document.getElementById('sG').textContent=g;
+  document.getElementById('sY').textContent=y;
+  document.getElementById('sO').textContent=o;
+  document.getElementById('sR').textContent=r;
+}
+function fmt(n){return n!=null?n.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:4}):'—';}
+
+function openAdd(){editISIN=null;document.getElementById('mTitle').textContent='➕ Aggiungi';document.getElementById('mDel').style.display='none';['mISIN','mNome','mEmit','mBarr','mScad','mSotto'].forEach(id=>document.getElementById(id).value='');document.getElementById('ov').classList.add('open');}
+function openEdit(isin){editISIN=isin;const c=S.certs[isin]||{};document.getElementById('mTitle').textContent='✏️ '+isin;document.getElementById('mDel').style.display='block';document.getElementById('mISIN').value=isin;document.getElementById('mNome').value=c.nome||'';document.getElementById('mEmit').value=c.emittente||'';document.getElementById('mBarr').value=c.barrieraPct||'';document.getElementById('mScad').value=c.scadenza||'';document.getElementById('mSotto').value=(c.sottostanti||[]).map(s=>`${s.nome} ; ${s.isin_s||'?'} ; ${s.strike||0}`).join('\n');document.getElementById('ov').classList.add('open');}
+function closeModal(){document.getElementById('ov').classList.remove('open');}
+function saveModal(){
+  const isin=document.getElementById('mISIN').value.trim().toUpperCase();
+  if(!isin){alert('ISIN obbligatorio');return;}
+  const lines=document.getElementById('mSotto').value.trim().split('\n').filter(l=>l.trim());
+  const sotto=lines.map(l=>{const p=l.split(';').map(x=>x.trim());return{nome:p[0]||'',isin_s:p[1]&&p[1]!=='?'?p[1]:nameToISIN(p[0]),strike:parseFloat(p[2])||0,prezzo_live:null,barriera_live:null};}).filter(s=>s.nome);
+  const cert={isin,nome:document.getElementById('mNome').value.trim()||isin,emittente:document.getElementById('mEmit').value.trim(),barrieraPct:parseFloat(document.getElementById('mBarr').value)||null,scadenza:document.getElementById('mScad').value.trim(),sottostanti:sotto,fonte:'manuale'};
+  S.certs[isin]=cert;if(!S.isins.includes(isin))S.isins.push(isin);
+  const cache=lc();cache[isin]=cert;sc(cache);
+  show('statsEl');show('toolbarEl');show('tableEl');
+  closeModal();render();toast(`✓ ${isin} salvato`,'ok');
+}
+function deleteCert(){if(!editISIN||!confirm(`Eliminare ${editISIN}?`))return;S.isins=S.isins.filter(i=>i!==editISIN);delete S.certs[editISIN];const cache=lc();delete cache[editISIN];sc(cache);closeModal();render();toast(`${editISIN} eliminato`,'inf');}
+
+function exportCSV(){
+  if(!S.isins.length){toast('Nessun dato','err');return;}
+  const rows=[['ISIN','Prodotto','Emittente','Barriera%','Scadenza','WorstOf','ISIN_Sott','Strike','Prezzo','Barriera€','Distanza%','Semaforo']];
+  S.isins.forEach(isin=>{const c=S.certs[isin]||{},barr=c.barrieraPct;let wd=null,ws=null;(c.sottostanti||[]).forEach(s=>{const p=s.prezzo_live??S.prices[s.isin_s];const bl=s.barriera_live??(s.strike&&barr?s.strike*(barr/100):null);if(!p||!bl)return;const d=(p-bl)/p;if(wd===null||d<wd){wd=d;ws={...s,p,bl};}});let sem='N/D';if(wd!==null)sem=wd<0?'VIOLATA':wd<.05?'CRITICO':wd<.15?'ATTENZIONE':wd<.30?'MONITORARE':'SICURO';rows.push([isin,c.nome||'',c.emittente||'',barr||'',c.scadenza||'',ws?.nome||'',ws?.isin_s||'',ws?.strike||'',ws?.p?.toFixed(4)||'',ws?.bl?.toFixed(4)||'',wd!=null?(wd*100).toFixed(2):'',sem]);});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+rows.map(r=>r.join(';')).join('\n')],{type:'text/csv;charset=utf-8'}));a.download=`certificates_${new Date().toISOString().slice(0,10)}.csv`;a.click();toast('CSV esportato ✓','ok');
+}
+
+function azzeraAll(){
+  if(!confirm('Azzerare tutti i dati e la cache?')) return;
+  localStorage.removeItem('cert_v9');
+  location.reload();
+}
+
+function openPrezzi(){
+  // Raccoglie tutti i sottostanti unici con prezzi
+  const items={};
+  for(const isin of S.isins){
+    const c=S.certs[isin]||{};
+    const barr=c.barrieraPct;
+    for(const s of (c.sottostanti||[])){
+      const key=s.isin_s||s.nome;
+      if(!items[key]){
+        const p=s.prezzo_live??S.prices[s.isin_s];
+        const bl=s.barriera_live??(s.strike&&barr?s.strike*(barr/100):null);
+        const d=(p&&bl)?(p-bl)/p:null;
+        items[key]={nome:s.nome,isin:s.isin_s,strike:s.strike,prezzo:p,barriera:bl,dist:d,certISIN:isin,manuale:s.manuale||false};
+      }
+    }
+  }
+
+  const grid=document.getElementById('prezziGrid');
+  grid.innerHTML=Object.entries(items).sort(([,a],[,b])=>(a.nome||'').localeCompare(b.nome||'')).map(([key,it])=>{
+    const lbl=ISIN2LABEL[it.isin]||it.nome?.slice(0,10)||key.slice(0,8);
+    const p=it.prezzo;
+    const bl=it.barriera;
+    const d=it.dist;
+    const bc=d===null?'var(--m2)':d<0?'var(--r)':d<.05?'var(--r)':d<.15?'var(--o)':d<.30?'var(--y)':'var(--g)';
+    const bw=d===null?0:Math.min(100,Math.max(0,d*100));
+    const distTxt=d!==null?(d*100).toFixed(1)+'%':'—';
+    const isManuale=it.manuale===true;
+    const priceTxt=p?p.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:4}):'—';
+    const barrTxt=bl?bl.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:4}):'—';
+    const inputHtml=!p?`<input type="number" step="0.001" placeholder="Inserisci prezzo..." onchange="setPrezzoManuale('${it.certISIN}','${key}',this.value)">`:
+      `<input type="number" step="0.001" value="${p}" onchange="setPrezzoManuale('${it.certISIN}','${key}',this.value)">`;
+    return `<div class="pcard" data-name="${(it.nome||lbl).toLowerCase()}">
+      <div class="pcard-name" title="${it.nome}">${lbl} <span style="font-size:9px;color:var(--m)">${it.isin||''}</span>${isManuale?' <span style="font-size:9px;background:var(--o);color:#fff;border-radius:3px;padding:1px 5px">Manuale</span>':''}</div>
+      <div class="pcard-price" style="color:${bc}">${priceTxt}${isManuale?' <span style="font-size:11px;color:var(--o)">✎</span>':''}</div>
+      <div class="pcard-meta">Strike: ${it.strike?it.strike.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:4}):'—'} · Barriera: ${barrTxt}</div>
+      <div class="pcard-bar"><div class="pcard-fill" style="width:${bw}%;background:${bc}"></div></div>
+      <div class="pcard-dist" style="color:${bc}">Distanza: ${distTxt}</div>
+      ${inputHtml}
+    </div>`;
+  }).join('');
+
+  if(!Object.keys(items).length) grid.innerHTML='<div style="color:var(--m);font-size:13px">Nessun sottostante caricato.</div>';
+  document.getElementById('ovPrezzi').classList.add('open');
+}
+
+function closePrezzi(){
+  document.getElementById('ovPrezzi').classList.remove('open');
+  document.getElementById('prezziSearch').value='';
+}
+function filtraPrezzi(q){
+  const v=q.toLowerCase().trim();
+  document.querySelectorAll('#prezziGrid .pcard').forEach(card=>{
+    const name=card.dataset.name||'';
+    card.style.display=(!v||name.includes(v))?'':'none';
+  });
+}
+
+function setPrezzoManuale(certISIN, key, val){
+  const p=parseFloat(val);
+  if(!p||p<=0){toast('Prezzo non valido','err');return;}
+  const c=S.certs[certISIN];if(!c)return;
+  const s=c.sottostanti?.find(s=>(s.isin_s||s.nome)===key||s.isin_s===key||s.nome===key);
+  if(s){
+    s.prezzo_live=p;
+    s.manuale=true;
+    if(s.isin_s) S.prices[s.isin_s]=p;
+    const cache=lc();cache[certISIN]=c;sc(cache);
+    render();
+    toast(`✓ Prezzo manuale aggiornato: ${p}`,'ok');
+    openPrezzi();
+  }
+}
+
+function showProg(v){document.getElementById('pbox').style.display=v?'block':'none';}
+function setProg(pct,label=''){document.getElementById('pfill').style.width=pct+'%';document.getElementById('ppct').textContent=pct+'%';if(label)document.getElementById('plabel').textContent=label;}
+function log(msg,cls=''){const el=document.getElementById('logEl');const d=document.createElement('div');if(cls)d.className=cls;d.textContent=msg;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function show(id){document.getElementById(id).style.display='';}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function toast(msg,cls=''){const el=document.getElementById('toast');el.textContent=msg;el.className='show'+(cls?' '+cls:'');setTimeout(()=>el.className='',3200);}
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('it-IT');},1000);
+</script>
+</body>
+</html>
